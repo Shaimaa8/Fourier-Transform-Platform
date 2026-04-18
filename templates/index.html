@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FT Lab — Mixer & Emphasizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-pulse"></div>FT LAB</div>
+  <nav>
+    <button class="tab-btn active" data-tab="mixer">Part A — Mixer</button>
+    <button class="tab-btn"        data-tab="emphasizer">Part B — Emphasizer</button>
+  </nav>
+  <a href="/home" class="header-home-btn">← HOME</a>
+</header>
+
+<!-- ══════════════ PART A: MIXER ══════════════ -->
+<section id="mixer" class="tab-content active">
+
+  <!-- 4 Input Viewports -->
+  <div class="viewports-grid" id="input-grid">
+    {% for i in range(4) %}
+    <div class="viewport" id="vp-{{ i }}">
+      <div class="vp-header">
+        <span class="vp-title">Image {{ i+1 }}</span>
+        <select class="comp-select" data-slot="{{ i }}">
+          <option value="magnitude">FT Magnitude</option>
+          <option value="phase">FT Phase</option>
+          <option value="real">FT Real</option>
+          <option value="imaginary">FT Imaginary</option>
+        </select>
+      </div>
+      <div class="vp-body">
+        <div class="img-panel" id="spatial-{{ i }}"
+             ondblclick="openFile({{ i }})"
+             title="Double-click to load | Drag: brightness↕ contrast↔">
+          <div class="drop-hint"><span>⊕</span><br>Double-click to load</div>
+        </div>
+        <div class="img-panel ft-panel" id="ft-{{ i }}"
+             title="Drag: brightness↕ contrast↔">
+          <div class="drop-hint muted">FT Component</div>
+          <div class="region-overlay" id="overlay-{{ i }}"></div>
+        </div>
+      </div>
+      <input type="file" id="file-{{ i }}" accept="image/*" style="display:none"
+             onchange="handleFile(event, {{ i }})">
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Controls Bar -->
+  <div class="controls-bar">
+    <div class="ctrl-group">
+      <label>Resize Policy</label>
+      <select id="resize-policy" onchange="toggleCustomSize()">
+        <option value="smallest">Smallest</option>
+        <option value="largest">Largest</option>
+        <option value="fixed">Fixed Size</option>
+      </select>
+      <div id="custom-size-row" class="custom-size-row" style="display:none">
+        <input type="number" id="custom-w" value="256" min="32" max="2048" class="num-input-sm" placeholder="W">
+        <span>×</span>
+        <input type="number" id="custom-h" value="256" min="32" max="2048" class="num-input-sm" placeholder="H">
+      </div>
+      <label class="checkbox-label"><input type="checkbox" id="keep-aspect"> Keep Aspect</label>
+      <button class="btn-sm" onclick="applyResize()">Apply</button>
+    </div>
+
+    <div class="ctrl-group">
+      <label>Mix Mode</label>
+      <select id="mix-mode">
+        <option value="mag_phase">Magnitude &amp; Phase</option>
+        <option value="real_imag">Real &amp; Imaginary</option>
+      </select>
+    </div>
+
+    <div class="ctrl-group">
+      <label>Region</label>
+      <select id="region-type" onchange="updateOverlays()">
+        <option value="inner">Inner (Low Freq)</option>
+        <option value="outer">Outer (High Freq)</option>
+      </select>
+      <div class="slider-row">
+        <span>Size</span>
+        <input type="range" id="region-ratio" min="5" max="95" value="30"
+               oninput="regionRatioLbl.textContent=this.value+'%'; updateOverlays()">
+        <span id="regionRatioLbl">30%</span>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <label>Output Port</label>
+      <div class="output-port-selector">
+        <button class="out-port-btn active" id="out-btn-0" onclick="selectOutputPort(0)">Output 1</button>
+        <button class="out-port-btn"        id="out-btn-1" onclick="selectOutputPort(1)">Output 2</button>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <label>Settings</label>
+      <label class="checkbox-label"><input type="checkbox" id="sim-lag"> Simulate Lag (10s)</label>
+    </div>
+  </div>
+
+  <!-- Weights -->
+  <div class="weights-section">
+    <div class="weights-header"><span class="weights-title">Component Weights</span></div>
+    <div class="weights-cards">
+      {% for i in range(4) %}
+      <div class="weight-card weight-card-disabled" id="weight-card-{{ i }}">
+        <div class="weight-card-title">Image {{ i+1 }}
+          <span class="wcard-hint" id="wcard-hint-{{ i }}"> — load image first</span>
+        </div>
+        <div class="weight-slider-row">
+          <span class="wlbl-name magnitude-lbl" id="lbl-a-{{ i }}">Magnitude</span>
+          <input type="range" class="weight-slider slider-mag" id="wa-{{ i }}"
+                 min="0" max="100" value="50" disabled
+                 oninput="document.getElementById('wa-val-{{ i }}').textContent=this.value+'%'">
+          <span class="wval" id="wa-val-{{ i }}">50%</span>
+        </div>
+        <div class="weight-slider-row">
+          <span class="wlbl-name phase-lbl" id="lbl-b-{{ i }}">Phase</span>
+          <input type="range" class="weight-slider slider-phase" id="wb-{{ i }}"
+                 min="0" max="100" value="50" disabled
+                 oninput="document.getElementById('wb-val-{{ i }}').textContent=this.value+'%'">
+          <span class="wval" id="wb-val-{{ i }}">50%</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Mix Button + Progress -->
+  <div class="mix-row">
+    <button class="btn-mix" onclick="doMix()">⚡ MIX</button>
+    <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <span id="progress-lbl" class="progress-lbl">—</span>
+  </div>
+
+  <!-- [GAP-1] 2 Output Viewports — now "exactly similar" to input viewports -->
+  <div class="viewports-grid two-col" id="output-grid">
+    {% for i in range(2) %}
+    <div class="viewport output-vp" id="out-vp-{{ i }}">
+      <div class="vp-header">
+        <span class="vp-title">Output {{ i+1 }}</span>
+        <!-- FT component selector — same as input viewports -->
+        <select class="out-comp-select" id="out-comp-{{ i }}"
+                onchange="refreshOutputFT({{ i }})" disabled>
+          <option value="off">— Spatial only —</option>
+          <option value="magnitude">FT Magnitude</option>
+          <option value="phase">FT Phase</option>
+          <option value="real">FT Real</option>
+          <option value="imaginary">FT Imaginary</option>
+        </select>
+        <button class="btn-save" id="save-btn-{{ i }}" onclick="saveOutputImage({{ i }})" disabled title="Save output image">⬇ Save</button>
+      </div>
+      <div class="vp-body" id="out-body-{{ i }}">
+        <!-- spatial result -->
+        <div class="img-panel" id="output-{{ i }}"
+             title="Drag: brightness↕ contrast↔">
+          <div class="drop-hint muted">Result will appear here</div>
+        </div>
+        <!-- FT of result — hidden until a comp is selected -->
+        <div class="img-panel" id="out-ft-{{ i }}" style="display:none"
+             title="FT of output | Drag: brightness↕ contrast↔">
+          <div class="drop-hint muted">FT Component</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</section>
+
+<!-- ══════════════ PART B: EMPHASIZER ══════════════ -->
+<section id="emphasizer" class="tab-content">
+  <div class="emph-layout">
+
+    <!-- 4 viewports -->
+    <div class="emph-viewports">
+
+      <!-- [GAP-4] Spatial Original — now has comp selector like other panels -->
+      <div class="viewport" id="evp-orig-spatial">
+        <div class="vp-header">
+          <span class="vp-title" id="evp-orig-spatial-title">Spatial — Original</span>
+          <select id="e-spatial-orig-comp" class="comp-select-sm" onchange="updateEmphOrigSpatialComp()">
+            <option value="spatial">Spatial (Real)</option>
+            <option value="magnitude">Magnitude</option>
+            <option value="phase">Phase</option>
+            <option value="imaginary">Imaginary</option>
+          </select>
+        </div>
+        <div class="vp-body single-col">
+          <div class="img-panel" id="e-spatial-orig"
+               ondblclick="openEmphFile()" title="Double-click to load">
+            <div class="drop-hint">⊕<br>Double-click to load</div>
+          </div>
+        </div>
+        <input type="file" id="emph-file" accept="image/*" style="display:none"
+               onchange="handleEmphFile(event)">
+      </div>
+
+      <!-- Spatial Processed -->
+      <div class="viewport" id="evp-proc-spatial">
+        <div class="vp-header">
+          <span class="vp-title" id="evp-proc-spatial-title">Spatial — Processed</span>
+          <select id="e-spatial-proc-comp" class="comp-select-sm" onchange="updateEmphProcDisplay()">
+            <option value="spatial">Spatial (Real)</option>
+            <option value="magnitude">Magnitude</option>
+            <option value="phase">Phase</option>
+            <option value="imaginary">Imaginary</option>
+          </select>
+          <span id="complex-badge" style="display:none;font-family:var(--mono);font-size:9px;
+            background:rgba(183,148,244,.2);color:#b794f4;padding:2px 6px;border-radius:4px;">complex</span>
+        </div>
+        <div class="vp-body single-col">
+          <div class="img-panel" id="e-spatial-proc">
+            <div class="drop-hint muted">Apply an action</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FT Original -->
+      <div class="viewport" id="evp-orig-ft">
+        <div class="vp-header">
+          <span class="vp-title" id="evp-orig-ft-title">FT — Original</span>
+          <select id="e-orig-comp" class="comp-select-sm" onchange="updateEmphOrigComp()">
+            <option value="magnitude">Magnitude</option>
+            <option value="phase">Phase</option>
+            <option value="real">Real</option>
+            <option value="imaginary">Imaginary</option>
+          </select>
+        </div>
+        <div class="vp-body single-col">
+          <div class="img-panel" id="e-ft-orig">
+            <div class="drop-hint muted">FT of original</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FT Processed -->
+      <div class="viewport" id="evp-proc-ft">
+        <div class="vp-header">
+          <span class="vp-title" id="evp-proc-ft-title">FT — Processed</span>
+          <select id="e-ft-proc-comp" class="comp-select-sm" onchange="updateEmphProcDisplay()">
+            <option value="mag">Magnitude</option>
+            <option value="phase">Phase</option>
+            <option value="real">Real</option>
+            <option value="imag">Imaginary</option>
+          </select>
+        </div>
+        <div class="vp-body single-col">
+          <div class="img-panel" id="e-ft-proc">
+            <div class="drop-hint muted">FT of processed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="emph-controls">
+
+      <div class="ctrl-group">
+        <label>Apply Action On</label>
+        <div class="domain-toggle">
+          <button class="domain-btn active" id="domain-spatial-btn"
+                  onclick="setDomain('spatial')">Spatial Domain</button>
+          <button class="domain-btn" id="domain-freq-btn"
+                  onclick="setDomain('frequency')">Frequency Domain</button>
+        </div>
+        <input type="hidden" id="emph-domain" value="spatial">
+      </div>
+
+      <div class="ctrl-group">
+        <label>Action</label>
+        <select id="emph-action" onchange="showActionParams(this.value)">
+          <option value="shift">① Shift</option>
+          <option value="complex_exp">② Multiply Complex Exp</option>
+          <option value="stretch">③ Stretch</option>
+          <option value="mirror">④ Mirror / Symmetry</option>
+          <option value="make_even">⑤ Make Even</option>
+          <option value="make_odd">⑤ Make Odd</option>
+          <option value="rotate">⑥ Rotate</option>
+          <option value="differentiate">⑦ Differentiate</option>
+          <option value="integrate">⑧ Integrate</option>
+          <option value="window">⑨ Apply Window</option>
+          <option value="fourier_n">⑩ Fourier N Times</option>
+        </select>
+      </div>
+
+      <!-- Param panels -->
+      <div id="params-shift" class="param-panel">
+        <div class="param-row"><label>ΔX (pixels)</label>
+          <input type="number" id="p-dx" value="0" class="num-input"></div>
+        <div class="param-row"><label>ΔY (pixels)</label>
+          <input type="number" id="p-dy" value="0" class="num-input"></div>
+      </div>
+
+      <div id="params-complex_exp" class="param-panel hidden">
+        <div class="param-row"><label>u₀ (horiz freq)</label>
+          <input type="number" id="p-u0" value="1" step="0.1" class="num-input"></div>
+        <div class="param-row"><label>v₀ (vert freq)</label>
+          <input type="number" id="p-v0" value="1" step="0.1" class="num-input"></div>
+      </div>
+
+      <div id="params-stretch" class="param-panel hidden">
+        <div class="param-row"><label>Scale X (sx)</label>
+          <input type="number" id="p-sx" value="1" step="0.1" min="0.1" class="num-input"></div>
+        <div class="param-row"><label>Scale Y (sy)</label>
+          <input type="number" id="p-sy" value="1" step="0.1" min="0.1" class="num-input"></div>
+      </div>
+
+      <div id="params-mirror" class="param-panel hidden">
+        <div class="param-row"><label>Mirror Axis</label>
+          <select id="p-axis-mirror" class="num-input">
+            <option value="horizontal">Horizontal (left-right)</option>
+            <option value="vertical">Vertical (up-down)</option>
+            <option value="both">Both</option>
+          </select></div>
+      </div>
+
+      <div id="params-make_even" class="param-panel hidden">
+        <p class="param-note">Even: f(x,y) = [f(x,y) + f(−x,−y)] / 2</p>
+      </div>
+      <div id="params-make_odd" class="param-panel hidden">
+        <p class="param-note">Odd: f(x,y) = [f(x,y) − f(−x,−y)] / 2</p>
+      </div>
+
+      <div id="params-rotate" class="param-panel hidden">
+        <div class="param-row"><label>Angle (0–360°)</label>
+          <input type="number" id="p-angle" value="0" min="0" max="360" class="num-input"></div>
+        <input type="range" id="p-angle-slider" min="0" max="360" value="0"
+               oninput="document.getElementById('p-angle').value=this.value; scheduleAutoEmph()">
+        <p class="param-note" id="rotate-size-info">Canvas expands to fit rotated image.</p>
+      </div>
+
+      <div id="params-differentiate" class="param-panel hidden">
+        <div class="param-row"><label>Axis</label>
+          <select id="p-axis-diff" class="num-input">
+            <option value="x">X (∂/∂x)</option>
+            <option value="y">Y (∂/∂y)</option>
+          </select></div>
+      </div>
+
+      <div id="params-integrate" class="param-panel hidden">
+        <div class="param-row"><label>Axis</label>
+          <select id="p-axis-int" class="num-input">
+            <option value="x">X (∫dx)</option>
+            <option value="y">Y (∫dy)</option>
+          </select></div>
+      </div>
+
+      <div id="params-window" class="param-panel hidden">
+        <div class="param-row"><label>Window Type</label>
+          <select id="p-win-type" class="num-input" onchange="updateWindowParams()">
+            <option value="rectangular">Rectangular</option>
+            <option value="gaussian">Gaussian</option>
+            <option value="hamming">Hamming</option>
+            <option value="hanning">Hanning</option>
+          </select></div>
+        <!-- Gaussian params -->
+        <div id="gaussian-params" style="display:none">
+          <div class="param-row"><label>σ X</label>
+            <input type="number" id="p-sigma-x" value="0.3" step="0.05" min="0.01" class="num-input"></div>
+          <div class="param-row"><label>σ Y</label>
+            <input type="number" id="p-sigma-y" value="0.3" step="0.05" min="0.01" class="num-input"></div>
+        </div>
+        <!-- [GAP-3] Hamming alpha -->
+        <div id="hamming-params" style="display:none">
+          <div class="param-row"><label>α (0.5–1.0)</label>
+            <input type="number" id="p-hamming-alpha" value="0.54" step="0.01"
+                   min="0.5" max="1.0" class="num-input">
+          </div>
+          <p class="param-note">α=0.54 → Hamming · α=0.5 → Hann</p>
+        </div>
+        <!-- [GAP-3] Hanning beta -->
+        <div id="hanning-params" style="display:none">
+          <div class="param-row"><label>β (0.5–2.0)</label>
+            <input type="number" id="p-hanning-beta" value="1.0" step="0.1"
+                   min="0.1" max="2.0" class="num-input">
+          </div>
+          <p class="param-note">β=1 → standard Hanning · β&gt;1 → flatter top</p>
+        </div>
+        <!-- Rectangular params -->
+        <div id="rect-params" style="display:flex;flex-direction:column;gap:6px">
+          <div class="param-row"><label>Width %</label>
+            <input type="range" id="p-rect-w" min="5" max="100" value="100"
+                   oninput="rectWLbl.textContent=this.value+'%'; scheduleAutoEmph()">
+            <span id="rectWLbl">100%</span></div>
+          <div class="param-row"><label>Height %</label>
+            <input type="range" id="p-rect-h" min="5" max="100" value="100"
+                   oninput="rectHLbl.textContent=this.value+'%'; scheduleAutoEmph()">
+            <span id="rectHLbl">100%</span></div>
+        </div>
+      </div>
+
+      <div id="params-fourier_n" class="param-panel hidden">
+        <div class="param-row"><label>N repetitions</label>
+          <input type="number" id="p-n" value="1" min="1" max="8" class="num-input"></div>
+      </div>
+
+      <div class="ctrl-group">
+        <label>Extra Fourier on top (N)</label>
+        <input type="number" id="e-n-fourier" value="0" min="0" max="8" class="num-input">
+      </div>
+
+      <button class="btn-apply" onclick="applyEmph()">✦ APPLY</button>
+    </div>
+  </div>
+</section>
+
+<script src="/static/app.js"></script>
+<script>
+// ── Domain toggle — [GAP-4] properly swaps viewport roles ────────────────────
+function setDomain(d) {
+  document.getElementById('emph-domain').value = d;
+  document.getElementById('domain-spatial-btn').classList.toggle('active', d === 'spatial');
+  document.getElementById('domain-freq-btn').classList.toggle('active', d === 'frequency');
+
+  if (d === 'spatial') {
+    document.getElementById('evp-orig-spatial-title').textContent = 'Spatial — Original';
+    document.getElementById('evp-proc-spatial-title').textContent = 'Spatial — Processed';
+    document.getElementById('evp-orig-ft-title').textContent      = 'FT — Original';
+    document.getElementById('evp-proc-ft-title').textContent      = 'FT — Processed';
+    // Spatial orig panel = input (blue border), FT orig = derived
+    document.getElementById('evp-orig-spatial').classList.add('vp-input-role');
+    document.getElementById('evp-orig-ft').classList.remove('vp-input-role');
+  } else {
+    document.getElementById('evp-orig-spatial-title').textContent = 'Spatial ← (IFFT of FT orig)';
+    document.getElementById('evp-proc-spatial-title').textContent = 'Spatial ← (IFFT of FT proc)';
+    document.getElementById('evp-orig-ft-title').textContent      = 'FT — Original (input)';
+    document.getElementById('evp-proc-ft-title').textContent      = 'FT — Processed (output)';
+    // FT orig panel = input (blue border), spatial = derived
+    document.getElementById('evp-orig-ft').classList.add('vp-input-role');
+    document.getElementById('evp-orig-spatial').classList.remove('vp-input-role');
+  }
+  scheduleAutoEmph();
+}
+
+// ── Mix mode weight labels ────────────────────────────────────────────────────
+document.getElementById('mix-mode').addEventListener('change', function() {
+  const isMagPhase = this.value === 'mag_phase';
+  for (let i = 0; i < 4; i++) {
+    const lblA = document.getElementById('lbl-a-' + i);
+    const lblB = document.getElementById('lbl-b-' + i);
+    if (lblA) { lblA.textContent = isMagPhase ? 'Magnitude' : 'Real';
+                lblA.className = 'wlbl-name ' + (isMagPhase ? 'magnitude-lbl' : 'real-lbl'); }
+    if (lblB) { lblB.textContent = isMagPhase ? 'Phase' : 'Imaginary';
+                lblB.className = 'wlbl-name ' + (isMagPhase ? 'phase-lbl' : 'imag-lbl'); }
+    const sA = document.getElementById('wa-' + i);
+    const sB = document.getElementById('wb-' + i);
+    if (sA) sA.style.accentColor = isMagPhase ? '' : 'var(--green)';
+    if (sB) sB.style.accentColor = isMagPhase ? '' : '#fb923c';
+  }
+});
+
+function toggleCustomSize() {
+  const isFixed = document.getElementById('resize-policy').value === 'fixed';
+  document.getElementById('custom-size-row').style.display = isFixed ? 'flex' : 'none';
+}
+
+// [GAP-3] Window type params show/hide
+function updateWindowParams() {
+  const t = document.getElementById('p-win-type').value;
+  document.getElementById('gaussian-params').style.display  = t === 'gaussian'     ? 'block' : 'none';
+  document.getElementById('hamming-params').style.display   = t === 'hamming'      ? 'block' : 'none';
+  document.getElementById('hanning-params').style.display   = t === 'hanning'      ? 'block' : 'none';
+  document.getElementById('rect-params').style.display      = t === 'rectangular'  ? 'flex'  : 'none';
+}
+
+// Sync rotate slider ↔ number input
+document.getElementById('p-angle').addEventListener('input', function() {
+  document.getElementById('p-angle-slider').value = this.value;
+});
+</script>
+</body>
+</html>

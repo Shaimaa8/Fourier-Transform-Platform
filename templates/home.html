@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FT Lab — Fourier Transform Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #03050a;
+      --surface: #080d18;
+      --surface2: #0d1525;
+      --border: rgba(99,179,237,0.12);
+      --border2: rgba(99,179,237,0.25);
+      --accent: #63b3ed;
+      --accent2: #90cdf4;
+      --purple: #b794f4;
+      --purple2: #d6bcfa;
+      --green: #68d391;
+      --amber: #f6ad55;
+      --red: #fc8181;
+      --text: #e2e8f0;
+      --text2: #94a3b8;
+      --text3: #475569;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID LINES BG ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(99,179,237,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,179,237,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* ── GLOW ORBS ── */
+    .orb {
+      position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+      filter: blur(120px); opacity: 0.18;
+    }
+    .orb-1 { width: 600px; height: 600px; background: #3b82f6; top: -200px; left: -200px; }
+    .orb-2 { width: 500px; height: 500px; background: #8b5cf6; bottom: -200px; right: -100px; }
+    .orb-3 { width: 300px; height: 300px; background: #06b6d4; top: 40%; left: 50%; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 64px;
+      background: rgba(3,5,10,0.8);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+    }
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 16px;
+      color: var(--accent);
+      letter-spacing: 3px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-links a {
+      color: var(--text2); font-size: 13px; text-decoration: none;
+      letter-spacing: .5px; font-weight: 500;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--accent); }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #03050a;
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
+      letter-spacing: 1px;
+      padding: 8px 20px; border-radius: 6px;
+      text-decoration: none;
+      transition: opacity .2s, transform .1s;
+    }
+    .nav-cta:hover { opacity: .85; transform: translateY(-1px); }
+
+    /* ── SECTIONS ── */
+    section { position: relative; z-index: 1; }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 100px 48px 60px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid var(--border2);
+      background: rgba(99,179,237,0.06);
+      color: var(--accent2);
+      font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+      padding: 6px 16px; border-radius: 100px;
+      margin-bottom: 36px;
+    }
+    .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.5s ease-in-out infinite; }
+
+    .hero-title {
+      font-size: clamp(52px, 8vw, 96px);
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -2px;
+      margin-bottom: 28px;
+    }
+    .hero-title span.gradient {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 50%, var(--accent2) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 2vw, 20px);
+      color: var(--text2);
+      max-width: 600px;
+      margin: 0 auto 52px;
+      font-weight: 300;
+      line-height: 1.7;
+    }
+
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #03050a;
+      font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: 1px;
+      padding: 14px 32px; border-radius: 8px;
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: transform .15s, opacity .15s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); opacity: .9; }
+
+    .btn-secondary {
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: var(--mono); font-size: 13px; letter-spacing: 1px;
+      padding: 14px 32px; border-radius: 8px;
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: border-color .2s, background .2s;
+      background: transparent;
+    }
+    .btn-secondary:hover { border-color: var(--accent); background: rgba(99,179,237,0.05); }
+
+    /* ── SPECTRUM VISUALIZER ── */
+    .spectrum-bar {
+      display: flex; align-items: flex-end; gap: 3px;
+      height: 60px; margin: 60px auto 0;
+      width: 320px; opacity: .4;
+    }
+    .spec-col {
+      flex: 1; background: var(--accent);
+      border-radius: 2px 2px 0 0;
+      animation: specAnim 1.8s ease-in-out infinite;
+    }
+    @keyframes specAnim {
+      0%,100% { transform: scaleY(1); }
+      50% { transform: scaleY(0.2); }
+    }
+
+    /* ── STATS ── */
+    #stats {
+      padding: 0 48px 80px;
+    }
+    .stats-grid {
+      max-width: 900px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+      border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+      background: var(--border);
+    }
+    .stat-card {
+      background: var(--surface);
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .stat-num {
+      font-family: var(--mono); font-size: 40px; font-weight: 700;
+      color: var(--accent); line-height: 1;
+      margin-bottom: 8px;
+    }
+    .stat-label {
+      font-size: 12px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    /* ── FEATURES ── */
+    #features { padding: 100px 48px; }
+    .section-label {
+      font-family: var(--mono); font-size: 11px; color: var(--accent);
+      letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(32px, 5vw, 48px); font-weight: 700;
+      letter-spacing: -1px; line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .section-sub { font-size: 17px; color: var(--text2); max-width: 480px; margin-bottom: 60px; }
+
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+      background: var(--border); border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .feature-card {
+      background: var(--surface); padding: 36px 32px;
+      transition: background .2s;
+    }
+    .feature-card:hover { background: var(--surface2); }
+
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px; font-size: 18px;
+      background: rgba(99,179,237,0.06);
+    }
+    .feature-title { font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+    .feature-desc { font-size: 14px; color: var(--text2); line-height: 1.7; }
+
+    .feature-tag {
+      display: inline-block;
+      margin-top: 14px;
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+      padding: 4px 10px; border-radius: 100px;
+    }
+    .tag-a { color: var(--accent); border: 1px solid rgba(99,179,237,0.3); }
+    .tag-b { color: var(--purple); border: 1px solid rgba(183,148,244,0.3); }
+
+    /* ── DEMO PREVIEW ── */
+    #demo { padding: 100px 48px; }
+    .demo-container {
+      max-width: 1000px; margin: 0 auto;
+      border: 1px solid var(--border2);
+      border-radius: 20px; overflow: hidden;
+      background: var(--surface);
+    }
+    .demo-topbar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 20px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .demo-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .demo-url {
+      flex: 1; background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 6px; padding: 5px 14px;
+      font-family: var(--mono); font-size: 11px; color: var(--text3);
+      text-align: center; letter-spacing: .5px;
+    }
+    .demo-inner { padding: 24px; min-height: 340px; }
+
+    /* Mock viewport grid */
+    .mock-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .mock-vp {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden;
+    }
+    .mock-vp-bar {
+      height: 24px; background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 8px; gap: 4px;
+    }
+    .mock-vp-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); }
+    .mock-vp-img {
+      height: 100px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px;
+    }
+    .mock-img-block { background: var(--border); border-radius: 4px; }
+    .mock-img-block.has-img {
+      background: linear-gradient(135deg, rgba(99,179,237,0.2), rgba(183,148,244,0.2));
+    }
+    .mock-controls {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .mock-ctrl {
+      flex: 1; min-width: 120px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px;
+    }
+    .mock-ctrl-label { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase; }
+    .mock-slider { width: 100%; height: 3px; background: var(--border2); border-radius: 2px; position: relative; }
+    .mock-slider-fill { height: 100%; border-radius: 2px; }
+    .mock-slider-thumb { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg); position: absolute; top: 50%; transform: translateY(-50%); }
+
+    /* ── HOW IT WORKS ── */
+    #how { padding: 100px 48px; }
+    .steps-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+      max-width: 900px; margin: 0 auto;
+    }
+    .step-card {
+      position: relative; padding: 36px 28px;
+      border: 1px solid var(--border);
+      border-radius: 16px; background: var(--surface);
+    }
+    .step-num {
+      position: absolute; top: -1px; left: 28px;
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      color: var(--accent); letter-spacing: 2px;
+      background: var(--surface); padding: 0 8px;
+      transform: translateY(-50%);
+    }
+    .step-title { font-size: 18px; font-weight: 600; margin-bottom: 10px; }
+    .step-desc { font-size: 14px; color: var(--text2); }
+
+    /* ── TECH STACK ── */
+    #tech { padding: 80px 48px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .tech-label { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 3px; text-align: center; margin-bottom: 36px; text-transform: uppercase; }
+    .tech-pills { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .tech-pill {
+      border: 1px solid var(--border2);
+      color: var(--text2); font-family: var(--mono); font-size: 12px;
+      padding: 8px 20px; border-radius: 100px;
+      display: flex; align-items: center; gap: 8px;
+      transition: border-color .2s, color .2s;
+    }
+    .tech-pill:hover { border-color: var(--accent); color: var(--accent); }
+    .tech-pill-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    /* ── CTA ── */
+    #cta {
+      padding: 120px 48px;
+      text-align: center;
+    }
+    .cta-box {
+      max-width: 680px; margin: 0 auto;
+      border: 1px solid var(--border2);
+      border-radius: 24px;
+      padding: 60px 48px;
+      background: var(--surface);
+      position: relative; overflow: hidden;
+    }
+    .cta-box::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(99,179,237,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-title { font-size: clamp(28px, 4vw, 42px); font-weight: 700; letter-spacing: -1px; margin-bottom: 16px; }
+    .cta-sub { color: var(--text2); margin-bottom: 36px; }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 32px 48px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .footer-logo { font-family: var(--mono); font-size: 14px; color: var(--text3); }
+    .footer-copy { font-size: 12px; color: var(--text3); }
+
+    /* ── ANIMATIONS ── */
+    .fade-in { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .nav-links { display: none; }
+      #hero { padding: 100px 24px 60px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .features-grid { grid-template-columns: 1fr; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .mock-grid { grid-template-columns: repeat(2, 1fr); }
+      #features, #demo, #how, #cta { padding: 60px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Glow orbs -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-dot"></div>
+    FT LAB
+  </div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#demo">Preview</a>
+    <a href="#how">How it works</a>
+    <a href="#tech">Stack</a>
+  </div>
+  <a href="/app" class="nav-cta">LAUNCH APP →</a>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <div class="hero-badge">
+    <div class="hero-badge-dot"></div>
+    FOURIER TRANSFORM EXPLORER
+  </div>
+
+  <h1 class="hero-title fade-in">
+    See Inside<br>
+    <span class="gradient">Every Signal</span>
+  </h1>
+
+  <p class="hero-sub fade-in">
+    A professional-grade web application for exploring, mixing, and emphasizing
+    Fourier Transform components in 2D images — magnitude, phase, and everything in between.
+  </p>
+
+  <div class="hero-actions fade-in">
+    <a href="/app" class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Launch App
+    </a>
+    <a href="#features" class="btn-secondary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>
+      Explore Features
+    </a>
+  </div>
+
+  <!-- Animated spectrum bars -->
+  <div class="spectrum-bar">
+    <div class="spec-col" style="height:30%;animation-delay:0s"></div>
+    <div class="spec-col" style="height:60%;animation-delay:.1s"></div>
+    <div class="spec-col" style="height:90%;animation-delay:.2s"></div>
+    <div class="spec-col" style="height:45%;animation-delay:.3s"></div>
+    <div class="spec-col" style="height:75%;animation-delay:.4s"></div>
+    <div class="spec-col" style="height:100%;animation-delay:.5s"></div>
+    <div class="spec-col" style="height:55%;animation-delay:.6s"></div>
+    <div class="spec-col" style="height:80%;animation-delay:.7s"></div>
+    <div class="spec-col" style="height:35%;animation-delay:.8s"></div>
+    <div class="spec-col" style="height:65%;animation-delay:.9s"></div>
+    <div class="spec-col" style="height:20%;animation-delay:1s"></div>
+    <div class="spec-col" style="height:50%;animation-delay:1.1s"></div>
+    <div class="spec-col" style="height:85%;animation-delay:1.2s"></div>
+    <div class="spec-col" style="height:40%;animation-delay:1.3s"></div>
+    <div class="spec-col" style="height:70%;animation-delay:1.4s"></div>
+    <div class="spec-col" style="height:25%;animation-delay:1.5s"></div>
+    <div class="spec-col" style="height:95%;animation-delay:1.6s"></div>
+    <div class="spec-col" style="height:50%;animation-delay:1.7s"></div>
+    <div class="spec-col" style="height:15%;animation-delay:1.8s"></div>
+    <div class="spec-col" style="height:60%;animation-delay:1.9s"></div>
+  </div>
+</section>
+
+<!-- ── STATS ── -->
+<section id="stats">
+  <div class="stats-grid fade-in">
+    <div class="stat-card">
+      <div class="stat-num">4</div>
+      <div class="stat-label">Image Viewports</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">10</div>
+      <div class="stat-label">FT Properties</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">4</div>
+      <div class="stat-label">Window Types</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">∞</div>
+      <div class="stat-label">Fourier Iterations</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section id="features">
+  <div class="section-label">What you can do</div>
+  <h2 class="section-title fade-in">Two Powerful Modes</h2>
+  <p class="section-sub fade-in">Switch between the Mixer and Emphasizer to explore every aspect of Fourier analysis.</p>
+
+  <div class="features-grid fade-in">
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">FT Magnitude/Phase Mixer</div>
+      <div class="feature-desc">Load up to 4 images, adjust component weights with sliders, choose inner or outer frequency regions, and watch the IFFT result update in real-time.</div>
+      <span class="feature-tag tag-a">PART A</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">◈</div>
+      <div class="feature-title">Region Selection</div>
+      <div class="feature-desc">Draw a resizable rectangle on the frequency domain. Choose inner (low) or outer (high) frequencies. The selected region is highlighted with a blue overlay.</div>
+      <span class="feature-tag tag-a">PART A</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⊞</div>
+      <div class="feature-title">Smart Resize Policies</div>
+      <div class="feature-desc">Unify image sizes to smallest, largest, or a custom W×H. Toggle aspect ratio preservation. All four images are synchronized automatically.</div>
+      <span class="feature-tag tag-a">PART A</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">◐</div>
+      <div class="feature-title">FT Properties Emphasizer</div>
+      <div class="feature-desc">Apply 10 operations: shift, complex exponential, stretch, mirror, make even/odd, rotate, differentiate, integrate, windowing, and N-fold Fourier.</div>
+      <span class="feature-tag tag-b">PART B</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⬡</div>
+      <div class="feature-title">Duality Illustration</div>
+      <div class="feature-desc">Apply any action in the spatial domain and see its FT counterpart — or flip it and apply directly in the frequency domain. Duality at its finest.</div>
+      <span class="feature-tag tag-b">PART B</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">◉</div>
+      <div class="feature-title">Brightness / Contrast Drag</div>
+      <div class="feature-desc">Drag on any viewport to adjust brightness (up/down) and contrast (left/right) independently, per panel, in real-time — including FT components.</div>
+      <span class="feature-tag tag-a">BOTH</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── DEMO PREVIEW ── -->
+<section id="demo">
+  <div class="section-label">App Preview</div>
+  <h2 class="section-title fade-in">What it looks like</h2>
+
+  <div class="demo-container fade-in">
+    <div class="demo-topbar">
+      <div class="demo-dot" style="background:#fc8181"></div>
+      <div class="demo-dot" style="background:#f6ad55"></div>
+      <div class="demo-dot" style="background:#68d391"></div>
+      <div class="demo-url">localhost:5000 / FT Lab</div>
+    </div>
+    <div class="demo-inner">
+      <!-- Mock header tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);border:1px solid rgba(99,179,237,0.3);padding:4px 14px;border-radius:5px;background:rgba(99,179,237,0.08)">Part A — Mixer</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:4px 14px;border-radius:5px">Part B — Emphasizer</div>
+      </div>
+      <!-- Mock 4 viewports -->
+      <div class="mock-grid">
+        <div class="mock-vp">
+          <div class="mock-vp-bar">
+            <div class="mock-vp-dot"></div>
+            <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">Image 1</span>
+          </div>
+          <div class="mock-vp-img">
+            <div class="mock-img-block has-img" style="background:linear-gradient(135deg,rgba(99,179,237,0.3),rgba(99,179,237,0.05))"></div>
+            <div class="mock-img-block has-img" style="background:linear-gradient(135deg,rgba(183,148,244,0.3),rgba(183,148,244,0.05))"></div>
+          </div>
+        </div>
+        <div class="mock-vp">
+          <div class="mock-vp-bar">
+            <div class="mock-vp-dot"></div>
+            <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">Image 2</span>
+          </div>
+          <div class="mock-vp-img">
+            <div class="mock-img-block has-img" style="background:linear-gradient(135deg,rgba(104,211,145,0.3),rgba(104,211,145,0.05))"></div>
+            <div class="mock-img-block has-img" style="background:linear-gradient(135deg,rgba(246,173,85,0.3),rgba(246,173,85,0.05))"></div>
+          </div>
+        </div>
+        <div class="mock-vp">
+          <div class="mock-vp-bar">
+            <div class="mock-vp-dot"></div>
+            <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">Image 3</span>
+          </div>
+          <div class="mock-vp-img">
+            <div class="mock-img-block"></div>
+            <div class="mock-img-block"></div>
+          </div>
+        </div>
+        <div class="mock-vp">
+          <div class="mock-vp-bar">
+            <div class="mock-vp-dot"></div>
+            <span style="font-family:var(--mono);font-size:9px;color:var(--text3)">Image 4</span>
+          </div>
+          <div class="mock-vp-img">
+            <div class="mock-img-block"></div>
+            <div class="mock-img-block"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Mock controls -->
+      <div class="mock-controls">
+        <div class="mock-ctrl">
+          <div class="mock-ctrl-label">Magnitude Weight</div>
+          <div class="mock-slider"><div class="mock-slider-fill" style="width:60%;background:var(--accent)"></div><div class="mock-slider-thumb" style="left:60%;background:var(--accent)"></div></div>
+        </div>
+        <div class="mock-ctrl">
+          <div class="mock-ctrl-label">Phase Weight</div>
+          <div class="mock-slider"><div class="mock-slider-fill" style="width:40%;background:var(--purple)"></div><div class="mock-slider-thumb" style="left:40%;background:var(--purple)"></div></div>
+        </div>
+        <div class="mock-ctrl">
+          <div class="mock-ctrl-label">Region Size</div>
+          <div class="mock-slider"><div class="mock-slider-fill" style="width:30%;background:var(--green)"></div><div class="mock-slider-thumb" style="left:30%;background:var(--green)"></div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+          <div style="background:var(--accent);color:var(--bg);font-family:var(--mono);font-size:11px;font-weight:700;padding:10px 20px;border-radius:6px;letter-spacing:1px">⚡ MIX</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section id="how">
+  <div style="max-width:900px;margin:0 auto;text-align:center">
+    <div class="section-label">Workflow</div>
+    <h2 class="section-title fade-in">Three steps to insight</h2>
+  </div>
+  <div class="steps-grid fade-in" style="margin-top:48px">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <div class="step-title">Load Images</div>
+      <div class="step-desc">Double-click any viewport to load a grayscale image. Up to 4 images for mixing, 1 for the Emphasizer. Drag to adjust brightness and contrast instantly.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <div class="step-title">Configure & Mix</div>
+      <div class="step-desc">Choose between Magnitude/Phase or Real/Imaginary mixing modes. Adjust per-image weights, select a frequency region, and hit MIX — or let auto-mix do it live.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <div class="step-title">Explore Properties</div>
+      <div class="step-desc">Switch to the Emphasizer, pick an action from the dropdown, tweak parameters, and watch both spatial and frequency domain viewports update in real-time.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TECH STACK ── -->
+<section id="tech">
+  <div class="tech-label">Built with</div>
+  <div class="tech-pills">
+    <div class="tech-pill"><div class="tech-pill-dot" style="background:#3776ab"></div>Python 3</div>
+    <div class="tech-pill"><div class="tech-pill-dot" style="background:#ff6e42"></div>Flask</div>
+    <div class="tech-pill"><div class="tech-pill-dot" style="background:#4dabcf"></div>NumPy</div>
+    <div class="tech-pill"><div class="tech-pill-dot" style="background:#11557c"></div>SciPy</div>
+    <div class="tech-pill"><div class="tech-pill-dot" style="background:#11a9ba"></div>Pillow</div>
+    <div class="tech-pill"><div class="tech-pill-dot" style="background:#f7df1e"></div>Vanilla JS</div>
+    <div class="tech-pill"><div class="tech-pill-dot" style="background:#1572b6"></div>CSS3</div>
+    <div class="tech-pill"><div class="tech-pill-dot" style="background:#63b3ed"></div>FFT2 / IFFT2</div>
+    <div class="tech-pill"><div class="tech-pill-dot" style="background:#b794f4"></div>OOP Design</div>
+    <div class="tech-pill"><div class="tech-pill-dot" style="background:#68d391"></div>Threading</div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section id="cta">
+  <div class="cta-box fade-in">
+    <h2 class="cta-title">Ready to explore<br>the frequency domain?</h2>
+    <p class="cta-sub">Open the app, load your first image, and start mixing Fourier components.</p>
+    <a href="/app" class="btn-primary" style="margin:0 auto;width:fit-content">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Launch FT Lab
+    </a>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">⚛ FT LAB</div>
+  <div class="footer-copy">Signal Processing — Digital Image Analysis</div>
+</footer>
+
+<script>
+// Intersection Observer for fade-in animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Stagger spectrum bars with random heights
+document.querySelectorAll('.spec-col').forEach(col => {
+  const h = Math.random() * 80 + 15;
+  col.style.height = h + '%';
+  setInterval(() => {
+    const newH = Math.random() * 80 + 15;
+    col.style.height = newH + '%';
+  }, Math.random() * 1000 + 800);
+});
+</script>
+</body>
+</html>
