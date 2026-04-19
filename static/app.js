@@ -1,11 +1,4 @@
-/**
- * app.js — Frontend FINAL v4
- *
- * [GAP-1] Output viewports: FT component dropdown + refreshOutputFT()
- * [GAP-2] True server-side B/C: on mouseup commits B/C to /api/bc, re-fetches PNG
- * [GAP-3] Hamming/Hanning params wired in getActionParams()
- * [GAP-4] updateEmphOrigSpatialComp() for the new spatial-orig comp selector
- */
+
 
 // ── Global state ───────────────────────────────────────────────────────────────
 let _pollInterval        = null;

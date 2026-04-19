@@ -1,13 +1,3 @@
-"""
-app.py — Flask backend (FINAL v4)
-All gaps fixed:
-  [GAP-1] Output viewports now return FT components via /api/output_component
-  [GAP-2] Brightness/Contrast backed by server-side re-render via /api/bc
-  [GAP-3] Hamming alpha + Hanning parameters exposed & controllable
-  [GAP-4] Domain swap: frequency-domain action swaps viewport roles correctly
-  [OOP-1] Mixer class encapsulates all thread orchestration
-  [OOP-2] _dispatch_action() eliminates repetition between spatial/freq actions
-"""
 
 from flask import Flask, request, jsonify, render_template
 import numpy as np
